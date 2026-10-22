@@ -2,7 +2,7 @@
 /* ---------- acciones ---------- */
 const A = {
   noop: () => {},
-  tab: id => { tab = id; closeAll(); render(); window.scrollTo(0, 0); },
+  tab: id => { tab = id; if (id === 'inicio') qHome = ''; closeAll(); render(); window.scrollTo(0, 0); },
   back: () => closeSheet(),
   settings: () => settings(),
   resumen: () => { closeAll(); resMode = 'dia'; resAnchor = todayISO(); resumenSheet(); },
@@ -61,12 +61,12 @@ const A = {
   editcli: id => cliForm(id),
   savecli: async id => {
     const nombre = $('#cf-nombre').value.trim(); if (!nombre) { toast('Escribe el nombre.'); return; }
-    const data = {...(id ? docs[id] : {t:'cliente', creado:new Date().toISOString()}), nombre, telefono:$('#cf-tel').value.trim(), nif:$('#cf-nif').value.trim().toUpperCase(), email:$('#cf-email').value.trim(), direccion:$('#cf-dir').value.trim()};
+    const data = {...(id ? docs[id] : {t:'cliente', creado:new Date().toISOString()}), nombre, telefono:$('#cf-tel').value.trim(), nif:$('#cf-nif').value.trim().toUpperCase(), email:$('#cf-email').value.trim(), direccion:$('#cf-dir').value.trim(), notas:$('#cf-notas').value.trim()};
     const cid = id || newId('c_'); await Store.put(cid, data);
     const mat = $('#cf-mat'); if (mat && normPlate(mat.value)) { const mod = $('#cf-mod').value.trim().split(/\s+/); await Store.put(newId('v_'), {t:'vehiculo', clienteId:cid, matricula:normPlate(mat.value), marca:mod[0] || '', modelo:mod.slice(1).join(' '), creado:new Date().toISOString()}); }
     closeSheet(); if (!id) openCli(cid); toast('Cliente guardado');
   },
-  delcli: async (id, el) => { if (S.trabajos.some(j => j.clienteId === id && j.numFactura)) { toast('Tiene facturas: no se puede borrar.'); return; } if (el.dataset.sure) { for (const v of S.vehiculos.filter(v => v.clienteId === id)) await Store.del(v.id); await Store.del(id); closeAll(); toast('Cliente borrado'); } else { el.dataset.sure = '1'; el.textContent = '¿Seguro?'; } },
+  delcli: async (id, el) => { if (el.dataset.sure) { const c = docs[id]; for (const f of (c.fotos || [])) await Store.delFile(f); for (const v of S.vehiculos.filter(v => v.clienteId === id)) await Store.del(v.id); await Store.del(id); closeAll(); toast('Cliente borrado'); } else { el.dataset.sure = '1'; el.textContent = S.trabajos.some(j => j.clienteId === id && j.numFactura) ? 'Sus facturas se conservan (lo exige la ley). Toca otra vez para eliminar' : 'Toca otra vez para eliminar el cliente y sus coches'; } },
   veh: id => { if (id) openVeh(id); },
   newveh: cid => vehForm(null, cid),
   editveh: id => vehForm(id),
@@ -115,8 +115,8 @@ const A = {
   export: k => exportCSV(k),
   gastos: () => gastosSheet(),
   'photo-menu': () => photoMenu(),
-  cam: () => { const f = $('#cam-in'); f.value = ''; f.click(); },
-  gal: () => { const f = $('#gal-in'); f.value = ''; f.click(); },
+  cam: () => { photoTarget = null; const f = $('#cam-in'); f.value = ''; f.click(); },
+  gal: () => { photoTarget = null; const f = $('#gal-in'); f.value = ''; f.click(); },
   newgasto: () => gastoForm(null, ''),
   gasto: id => gastoForm(byId(id), ''),
   savegasto: id => saveGasto(id),
@@ -153,8 +153,8 @@ document.addEventListener('input', e => {
     const pos = t.selectionStart; const id = t.id; render(); const n = $('#' + id); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e2) {} }
   }
 });
-$('#cam-in').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) readPhoto(f); });
-$('#gal-in').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) readPhoto(f); });
+$('#cam-in').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) { if (photoTarget) attachPhoto(f); else readPhoto(f); } });
+$('#gal-in').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) { if (photoTarget) attachPhoto(f); else readPhoto(f); } });
 $('#bk-in').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) importBackup(f); });
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (tab === 'mas') render(); });
 window.addEventListener('popstate', () => { if (sheetStack.length) { closeSheet(); history.pushState(null, ''); } });
@@ -162,7 +162,7 @@ window.addEventListener('popstate', () => { if (sheetStack.length) { closeSheet(
 /* ---------- arranque ---------- */
 (async () => {
   await Store.init(); booted = true; rebuild(); render();
+  if (await licBoot()) maybeBrief();
   try { history.pushState(null, ''); } catch (e) {}
   if ('serviceWorker' in navigator && location.protocol === 'https:' && window.self === window.top) { try { await navigator.serviceWorker.register('sw.js'); } catch (e) {} }
-})();
 })();

@@ -10,21 +10,26 @@ function openCli(id) {
       <div class="card stack" style="gap:6px">
         <div class="row"><div class="grow"><div class="muted small">Teléfono</div><div style="font-weight:700;font-size:18px" class="num">${esc(c.telefono || '—')}</div></div>${c.telefono ? `<button class="btn sm" data-a="wa-cli" data-id="${id}">${ICON.wa}WhatsApp</button>` : ''}</div>
         ${c.nif ? `<div class="small"><span class="muted">NIF:</span> ${esc(c.nif)}</div>` : ''}${c.direccion ? `<div class="small"><span class="muted">Dirección:</span> ${esc(c.direccion)}</div>` : ''}${c.email ? `<div class="small"><span class="muted">Email:</span> ${esc(c.email)}</div>` : ''}
-        <div class="small"><span class="muted">Facturado:</span> <b class="num">${eur(total)}</b>${deuda ? ` · <span class="neg">debe ${eur(deuda)}</span>` : ''}</div></div>
+        <div class="small"><span class="muted">Facturado:</span> <b class="num">${eur(total)}</b>${deuda ? ` · <span class="neg">debe ${eur(deuda)}</span>` : ''}</div>
+        ${c.notas ? `<div class="small" style="white-space:pre-wrap"><span class="muted">Notas:</span> ${esc(c.notas)}</div>` : ''}</div>
+      ${deudaCard(id)}
+      <div class="card stack" style="gap:8px"><div class="eyebrow">Fotos de la ficha</div>${photoGrid('cliente', id, c.fotos)}</div>
       <div class="section-h"><h2>Coches</h2><button class="btn sm" data-a="newveh" data-id="${id}">${ICON.plus}Coche</button></div>
       <div class="list">${vs.map(v => `<button class="item" data-a="veh" data-id="${v.id}">${plate(v.matricula)}<div class="grow"><div class="t">${esc(carName(v) || 'Sin modelo')}</div><div class="s">${S.trabajos.filter(j => j.vehiculoId === v.id).length} trabajos${v.km ? ' · ' + Number(v.km).toLocaleString('es-ES') + ' km' : ''}</div></div>${ICON.chevR}</button>`).join('') || '<div class="item static muted">Sin coches.</div>'}</div>
       <div class="grid2 keep"><button class="btn primary" data-a="newjobcli" data-id="${id}">${ICON.plus}Presupuesto</button><button class="btn" data-a="newcitacli" data-id="${id}">${ICON.cal}Cita</button></div>
       <div class="section-h"><h2>Historial</h2></div>
-      ${js.length ? `<div class="list">${js.map(jobItem).join('')}</div>` : '<div class="muted small">Sin trabajos.</div>'}`};
+      ${js.length ? `<div class="list">${js.map(jobItem).join('')}</div>` : '<div class="muted small">Sin trabajos.</div>'}
+      <button class="btn danger block" data-a="delcli" data-id="${id}">Eliminar este cliente</button>`};
   }});
 }
 function cliForm(id) {
-  const c = id ? byId(id) : {nombre:'', telefono:'', nif:'', direccion:'', email:''};
+  const c = id ? byId(id) : {nombre:'', telefono:'', nif:'', direccion:'', email:'', notas:''};
   openSheet({live:false, render:() => ({title:id ? 'Editar cliente' : 'Nuevo cliente', body:`
     <label class="f">Nombre o empresa<input class="in" id="cf-nombre" value="${esc(c.nombre)}"></label>
     <label class="f">Teléfono (WhatsApp)<input class="in" id="cf-tel" type="tel" inputmode="tel" value="${esc(c.telefono)}"></label>
     <div class="grid2"><label class="f">NIF / DNI<input class="in" id="cf-nif" value="${esc(c.nif)}" autocapitalize="characters"></label><label class="f">Email<input class="in" id="cf-email" type="email" value="${esc(c.email)}"></label></div>
     <label class="f">Dirección<input class="in" id="cf-dir" value="${esc(c.direccion)}"></label>
+    <label class="f">Notas <span class="h">Lo que quieras recordar: cómo prefiere que le avisen, descuentos…</span><textarea class="in" id="cf-notas">${esc(c.notas || '')}</textarea></label>
     ${!id ? `<div class="card stack"><div class="eyebrow">Su coche (opcional)</div><div class="grid2"><label class="f">Matrícula<input class="in plate-in" id="cf-mat" placeholder="1234 ABC" autocapitalize="characters"></label><label class="f">Marca y modelo<input class="in" id="cf-mod"></label></div></div>` : ''}`,
     foot:`${id ? `<button class="btn danger" data-a="delcli" data-id="${id}">Borrar</button>` : ''}<button class="btn primary block" data-a="savecli" data-id="${id || ''}">Guardar cliente</button>`})});
 }
@@ -41,6 +46,7 @@ function openVeh(id) {
       <button class="item card" data-a="cli" data-id="${c.id || ''}" style="border-radius:var(--r)"><div class="grow"><div class="muted small">Cliente</div><div class="t">${esc(c.nombre || 'Sin cliente')}</div><div class="s">${esc(c.telefono || '')}</div></div>${ICON.chevR}</button>
       <div class="grid2 keep"><button class="btn" data-a="vinlookup" data-id="${id}">Leer bastidor</button><button class="btn" data-a="platelookup" data-id="${id}">Datos por matrícula</button></div>
       <div class="grid2 keep"><button class="btn primary" data-a="newjobveh" data-id="${id}">${ICON.plus}Presupuesto</button><button class="btn" data-a="newcitaveh" data-id="${id}">${ICON.cal}Cita</button></div>
+      <div class="card stack" style="gap:8px"><div class="eyebrow">Fotos del coche</div>${photoGrid('vehiculo', id, v.fotos)}</div>
       <div class="section-h"><h2>Historial del coche</h2></div>
       ${js.length ? `<div class="list">${js.map(jobItem).join('')}</div>` : '<div class="muted small">Sin trabajos todavía.</div>'}`};
   }});
@@ -127,7 +133,7 @@ function citaForm(id, preset) {
     <div class="grid2"><label class="f">Nombre<input class="in" id="ct-nombre" value="${esc(c.nombre)}"></label><label class="f">Teléfono<input class="in" id="ct-tel" type="tel" inputmode="tel" value="${esc(c.telefono)}"></label></div>
     <label class="f">Motivo<input class="in" id="ct-motivo" value="${esc(c.motivo)}" placeholder="Revisión, ITV, ruido al frenar…"></label>
     ${id ? `<div class="eyebrow">Estado</div><div class="seg">${Object.entries(CITA_EST).map(([k, v]) => `<button class="${c.estado === k ? 'on' : ''}" data-a="citaest" data-id="${id}:${k}">${v}</button>`).join('')}</div>
-      <div class="grid2 keep">${c.telefono ? `<button class="btn" data-a="wa-cita" data-id="${id}">${ICON.wa}Confirmar por WhatsApp</button>` : ''}${c.trabajoId ? `<button class="btn" data-a="job" data-id="${c.trabajoId}">Ver presupuesto</button>` : `<button class="btn primary" data-a="cita2job" data-id="${id}">Ha llegado: presupuesto</button>`}</div>` : ''}`,
+      <div class="grid2 keep">${c.telefono ? `<button class="btn" data-a="wa-cita" data-id="${id}">${ICON.wa}Confirmar por WhatsApp</button>` : ''}${c.trabajoId ? `<button class="btn" data-a="horas" data-id="${c.trabajoId}">Apuntar horas</button><button class="btn" data-a="job" data-id="${c.trabajoId}">Ver presupuesto</button>` : `<button class="btn primary" data-a="cita2job" data-id="${id}">Ha llegado: presupuesto</button>`}</div>` : ''}`,
     foot:`${id ? `<button class="btn danger" data-a="delcita" data-id="${id}">Borrar</button>` : ''}<button class="btn primary block" data-a="savecita" data-id="${id || ''}">Guardar cita</button>`}),
     after:() => {
       const showFree = () => { const iso = $('#ct-fecha').value; const fr = iso ? slotsOf(iso).filter(s => !s.busy) : []; $('#ct-free').innerHTML = fr.length ? `<div class="chips">${fr.map(s => `<button class="chip ${s.hora === $('#ct-hora').value ? 'on' : ''}" data-a="pickhora" data-id="${s.hora}">${s.hora}</button>`).join('')}</div>` : `<div class="muted small">${iso && !openRanges(iso).length ? 'Ese día el taller está cerrado.' : 'No quedan huecos libres ese día.'}</div>`; };
@@ -182,4 +188,14 @@ function exportCSV(kind) {
   else if (kind === 'recibidas') { name = 'facturas-recibidas-' + tag + '.csv'; rows = [['Fecha','Proveedor','NIF proveedor','Nº factura','Concepto','Categoría','Base','% IVA','Cuota IVA','Total','Deducible']].concat(r.re.map(g => [fdate(g.fecha), g.proveedor, g.nif, g.numero, g.concepto, g.categoria, +g.base || 0, +g.ivaPct || 0, +g.cuota || 0, +g.total || 0, g.deducible === false ? 'No' : 'Sí'])); }
   else { const m = r.m130; name = 'resumen-' + tag + '.csv'; rows = [['Concepto','Importe'],['Titular', S.cfg.propietario + ' · ' + (S.cfg.nif || 'NIF sin rellenar')],['Periodo', repQ + 'T ' + repY],['',''],['MODELO 303',''],...Object.entries(r.repercutido).flatMap(([k, v]) => [['Base imponible al ' + k + ' %', v.base],['Cuota repercutida al ' + k + ' %', v.cuota]]),['Base compras deducibles', r.sopBase],['Cuota soportada deducible', r.sopCuota],['Resultado 303', r.res303],['',''],['MODELO 130 (acumulado del año)',''],['Ingresos', m.ing],['Gastos deducibles', m.gas],['Rendimiento neto', m.rend],['20 % rendimiento', m.veinte],['Pagos trimestres anteriores', m.anteriores],['Resultado 130', m.pago],...(S.cfg.alquiler ? [['',''],['Retenciones alquiler (115)', r.ret115]] : []),['',''],['Nota','Cálculo orientativo preparado por la app. Revisar antes de presentar.']]; }
   saveBlob(new Blob([csv(rows)], {type:'text/csv;charset=utf-8'}), name);
+}
+
+function deudaCard(cliId) {
+  const d = deudaDe(cliId);
+  if (!d.rows.length && !(d.cfg && d.cfg.abierta)) return '';
+  return `<div class="card stack" style="gap:6px"><div class="row"><div class="eyebrow grow">Cuenta deudora</div><button class="btn sm" data-a="deuda" data-id="${cliId}">${d.cfg && d.cfg.abierta ? 'Condiciones' : 'Abrir'}</button></div>
+    ${d.rows.map(r => `<div class="kv"><span>${esc(r.j.numFactura)} · vence ${fdate(r.vence)}${r.tarde ? ' · <span class="neg">' + r.tarde + ' días tarde</span>' : ''}</span><span class="v">${eur(r.pend)}${r.int ? ' <span class="neg">+ ' + eur(r.int) + '</span>' : ''}</span></div>`).join('')}
+    <div class="kv res"><span>Total a reclamar</span><span class="v">${eur(d.pend + d.int)}</span></div>
+    ${d.cfg && d.cfg.abierta ? `<div class="muted tiny">Interés anual del ${String(d.cfg.interes).replace('.', ',')} % desde ${d.cfg.plazo} días después de cada factura.</div>` : `<div class="muted tiny">Abre la cuenta deudora para aplicar intereses por demora.</div>`}
+    ${d.int ? `<button class="btn sm" data-a="cobrarint" data-id="${cliId}">Cobrar intereses (${eur(d.int)})</button>` : ''}</div>`;
 }

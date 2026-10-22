@@ -11,11 +11,14 @@ function gastosSheet() {
   }});
 }
 function photoMenu() {
-  openSheet({live:false, render:() => ({title:'Foto de factura', body:`
-    <div class="muted">Factura o ticket de un proveedor: recambios, aceite, alquiler, luz… La app lee proveedor, NIF, fecha, importes, IBAN y teléfono.</div>
-    <button class="btn primary block" style="min-height:64px" data-a="cam">${ICON.cam}Hacer la foto ahora</button>
-    <button class="btn block" style="min-height:64px" data-a="gal">${ICON.img}Elegir una foto de la galería</button>
-    <div class="note small">Para que se lea bien: factura plana, con buena luz y que ocupe toda la foto.</div>`})});
+  openSheet({live:false, render:() => ({title:'Foto', body:`
+    <div class="eyebrow">Factura de un gasto</div>
+    <div class="muted small">Proveedor de recambios, alquiler, suministros, seguros… La app lee proveedor, NIF, fecha, importes, IBAN y teléfono y la apunta en la contabilidad.</div>
+    <div class="grid2 keep"><button class="btn primary" style="min-height:64px" data-a="cam">${ICON.cam}Foto ahora</button><button class="btn" style="min-height:64px" data-a="gal">${ICON.img}De la galería</button></div>
+    <div class="note small">Para que se lea bien: factura plana, con buena luz y que ocupe toda la foto.</div>
+    <div class="eyebrow" style="margin-top:8px">Foto del coche o de una pieza</div>
+    <div class="muted small">Se une al trabajo del cliente y sale con su presupuesto y factura.</div>
+    <button class="btn block" style="min-height:56px" data-a="photopick">${ICON.car}Elegir el trabajo y hacer la foto</button>`})});
 }
 async function compress(file, max = 1800, q = 0.82) {
   const url = URL.createObjectURL(file);
@@ -118,7 +121,7 @@ function parseInvoice(text) {
   // si ya conocemos al proveedor por el NIF, mandan sus datos
   const known = out.nif && S.proveedores.find(p => normPlate(p.nif) === out.nif);
   if (known) { out.proveedor = known.nombre; out.categoria = known.categoria; out._known = true; }
-  else { const t = fold(text); out.categoria = /alquiler|lloguer|arrendamiento/.test(t) ? 'Alquiler del local' : /endesa|iberdrola|naturgy|electric|agua|aigues|movistar|vodafone|orange|telefon/.test(t) ? 'Luz, agua, teléfono' : /seguro|asseguran|mapfre|allianz|axa|mutua/.test(t) ? 'Seguros' : /aceite|lubric|5w|10w|anticongel|liquido/.test(t) ? 'Aceites y líquidos' : /gasolin|carburant|repsol|cepsa|bp |galp|shell/.test(t) ? 'Combustible' : /gestor|asesor/.test(t) ? 'Gestoría' : 'Recambios'; }
+  else { const t = fold(text); out.categoria = /alquiler|lloguer|arrendamiento/.test(t) ? 'Alquiler del local' : /endesa|iberdrola|naturgy|electric|agua|aigues|movistar|vodafone|orange|telefon/.test(t) ? 'Suministros (luz, agua, teléfono)' : /seguro|asseguran|mapfre|allianz|axa|mutua/.test(t) ? 'Seguros' : /aceite|lubric|5w|10w|anticongel|liquido/.test(t) ? 'Aceites y líquidos' : /gasolin|carburant|repsol|cepsa|bp |galp|shell/.test(t) ? 'Combustible' : /gestor|asesor/.test(t) ? 'Gestoría' : 'Recambios'; }
   return out;
 }
 
@@ -188,12 +191,14 @@ function settings(cfg) {
   openSheet({live:false, render:() => ({title:'Ajustes del taller', body:`
     <div class="eyebrow">Datos que salen en las facturas</div>
     <label class="f">Nombre del taller<input class="in" id="st-taller" value="${esc(c.taller)}"></label>
-    <div class="grid2"><label class="f">Titular<input class="in" id="st-prop" value="${esc(c.propietario)}"></label><label class="f">NIF<input class="in" id="st-nif" value="${esc(c.nif)}" autocapitalize="characters"></label></div>
+    <div class="grid2 keep"><label class="f">Nombre<input class="in" id="st-prop" value="${esc(c.propietario)}"></label><label class="f">Apellidos<input class="in" id="st-ape" value="${esc(c.apellidos || '')}"></label></div>
+    <label class="f">NIF<input class="in" id="st-nif" value="${esc(c.nif)}" autocapitalize="characters"></label>
     <label class="f">Dirección<input class="in" id="st-dir" value="${esc(c.direccion)}" placeholder="Calle y número"></label>
     <label class="f">Código postal y población<input class="in" id="st-pob" value="${esc(c.poblacion)}"></label>
     <div class="grid2"><label class="f">Teléfono<input class="in" id="st-tel" type="tel" value="${esc(c.telefono)}"></label><label class="f">Email<input class="in" id="st-email" type="email" value="${esc(c.email)}"></label></div>
     <div class="eyebrow" style="margin-top:8px">Precios e impuestos</div>
     <div class="grid3"><label class="f">€ / hora<input class="in num" id="st-tarifa" inputmode="decimal" value="${esc(String(c.tarifa).replace('.', ','))}"></label><label class="f">IVA %<input class="in num" id="st-iva" inputmode="numeric" value="${esc(c.iva)}"></label><label class="f">IRPF est. %<input class="in num" id="st-irpf" inputmode="numeric" value="${esc(c.irpf)}"></label></div>
+    <div class="muted tiny">Referencia: los talleres independientes de la zona de Barcelona cobran entre 30 y 55 € la hora más IVA; la media en Madrid ronda los 45 €.</div>
     <label class="f">Días de validez del presupuesto<input class="in num" id="st-val" inputmode="numeric" value="${esc(c.validez)}"></label>
     <label class="check"><input type="checkbox" id="st-alq" ${c.alquiler ? 'checked' : ''}> Pago alquiler del local con retención (modelo 115)</label>
     <label class="check"><input type="checkbox" id="st-trab" ${c.trabajadores ? 'checked' : ''}> Tengo trabajadores (modelo 111)</label>
@@ -221,7 +226,7 @@ function readCfgForm() {
   const v = id => ($('#' + id) || {}).value || '';
   const ck = id => !!($('#' + id) || {}).checked;
   $$('[data-c]').forEach(el => { const i = +el.dataset.c, f = el.dataset.f; if (STC.conceptos[i]) STC.conceptos[i][f] = (f === 'desc' || f === 'tipo') ? el.value : parseNum(el.value); });
-  return {...STC, t:'cfg', taller:v('st-taller').trim(), propietario:v('st-prop').trim(), nif:v('st-nif').trim().toUpperCase(), direccion:v('st-dir').trim(), poblacion:v('st-pob').trim(), telefono:v('st-tel').trim(), email:v('st-email').trim(),
+  return {...STC, t:'cfg', taller:v('st-taller').trim(), propietario:v('st-prop').trim(), apellidos:v('st-ape').trim(), nif:v('st-nif').trim().toUpperCase(), direccion:v('st-dir').trim(), poblacion:v('st-pob').trim(), telefono:v('st-tel').trim(), email:v('st-email').trim(),
     tarifa:parseNum(v('st-tarifa')), iva:parseNum(v('st-iva')) || 21, irpf:parseNum(v('st-irpf')), validez:parseInt(v('st-val')) || 15, alquiler:ck('st-alq'), trabajadores:ck('st-trab'),
     dias:$$('[data-dia]').filter(x => x.checked).map(x => +x.dataset.dia), m1:v('st-m1'), m2:v('st-m2'), t1:v('st-t1'), t2:v('st-t2'), sab:ck('st-sab'), sab1:v('st-s1'), sab2:v('st-s2'), hueco:+v('st-hueco') || 60,
     iban:v('st-iban').trim().toUpperCase(), linkPago:v('st-link').trim(), bizum:v('st-bizum').trim(), regcheck:v('st-reg').trim()};

@@ -110,16 +110,19 @@ function jobEditor(job, preset) {
       <label class="f">Matrícula<input class="in plate-in" id="ed-mat" value="${esc(showPlate(D.matricula))}" placeholder="1234 ABC" autocomplete="off" autocapitalize="characters"></label>
       <div id="ed-veh"></div>
       <label class="f">¿Qué le pasa al coche?<textarea class="in" id="ed-averia" placeholder="Ej.: ruido al frenar delante, cambio de aceite…">${esc(D.averia)}</textarea></label>
+      <div id="ed-sug"></div>
+      <button class="btn sm" data-a="catalogo">Ver todos los trabajos habituales</button>
       <div class="section-h"><h2>Trabajo y piezas</h2></div>
       <div id="ed-lines" class="stack"></div>
       <div class="row wrapr"><button class="btn sm" data-a="addline" data-id="mo">+ Horas</button><button class="btn sm" data-a="addline" data-id="pieza">+ Pieza</button><button class="btn sm" data-a="addline" data-id="otro">+ Otro</button></div>
       ${S.cfg.conceptos.length ? `<div><div class="eyebrow" style="margin-bottom:6px">Habituales</div><div class="chips">${S.cfg.conceptos.map((c, i) => `<button class="chip" data-a="addconc" data-id="${i}">${esc(c.desc)}</button>`).join('')}</div></div>` : ''}
+      <div class="card stack" style="gap:8px"><div class="eyebrow">Código de descuento</div><div class="row"><input class="in grow num" id="ed-dto" placeholder="Código" value="${esc(D.descuento ? D.descuento.codigo : '')}" autocapitalize="characters" style="text-transform:uppercase"><button class="btn sm" data-a="dtoapply">${D.descuento ? 'Quitar' : 'Aplicar'}</button></div><div id="ed-dtomsg" class="small"></div></div>
       <div class="card"><div class="totals" id="ed-tot"></div></div>`,
     foot:`<button class="btn primary block" data-a="savejob">Guardar presupuesto</button>`
   }), after:() => {
     edVeh(); edLines(); edTot();
     $('#ed-mat').addEventListener('input', e => { D.matricula = normPlate(e.target.value); edMatch(); });
-    $('#ed-averia').addEventListener('input', e => D.averia = e.target.value);
+    $('#ed-averia').addEventListener('input', e => { D.averia = e.target.value; sugBox(); }); sugBox();
   }});
 }
 function edMatch() {
@@ -158,7 +161,7 @@ function edLines() {
 }
 function edTot() {
   const t = totals(D); const box = $('#ed-tot'); if (!box) return;
-  box.innerHTML = `<span class="muted">Base</span><span>${eur(t.base)}</span><span class="muted">IVA ${t.iva} %</span><span>${eur(t.cuota)}</span><b style="align-self:end">Total</b><span class="big">${eur(t.total)}</span>`;
+  const j = D; box.innerHTML = `${t.dto ? `<span class="muted">Importe</span><span>${eur(t.bruto)}</span><span class="muted">Descuento ${esc(j.descuento.codigo)}</span><span class="pos">− ${eur(t.dto)}</span>` : ''}<span class="muted">Base</span><span>${eur(t.base)}</span><span class="muted">IVA ${t.iva} %</span><span>${eur(t.cuota)}</span><b style="align-self:end">Total</b><span class="big">${eur(t.total)}</span>`;
 }
 async function ensureClientVehicle(o) {
   // crea cliente y coche si son nuevos; o = {clienteId, vehiculoId, _cli, _veh, matricula}
@@ -182,7 +185,8 @@ async function saveJob() {
   const out = {t:'trabajo', estado:D.estado || 'borrador', numPresupuesto:D.numPresupuesto || nextNum('P'), fecha:D.fecha || todayISO(),
     clienteId:D.clienteId, vehiculoId:D.vehiculoId, clienteNombre:cli.nombre || '', matricula:D.matricula, km:D.km || '', averia:D.averia || '',
     lineas:D.lineas.map(l => ({tipo:l.tipo, desc:(l.desc || '').trim(), cant:+l.cant || 0, precio:+l.precio || 0})), iva:D.iva ?? S.cfg.iva, creado:D.creado || ts, modificado:ts};
-  ['firma','aceptadoFecha','aceptadoVia','aceptadoNombre','enviadoFecha','numFactura','fechaFactura','facturaCliente','pagos','citaId','ejemplo'].forEach(k => { if (D[k] !== undefined) out[k] = D[k]; });
+  ['firma','aceptadoFecha','aceptadoVia','aceptadoNombre','enviadoFecha','numFactura','fechaFactura','facturaCliente','pagos','citaId','ejemplo','descuento','fotos','horas','piezasPedidas','recordatorios','mostrarGesto'].forEach(k => { if (D[k] !== undefined && D[k] !== null) out[k] = D[k]; });
+  if (out.descuento && !out.descuento.contado) { const dd = descuentos().find(x => x.codigo === out.descuento.codigo); if (dd) await Store.put(dd.id, {...docs[dd.id], usos:(docs[dd.id].usos || 0) + 1}); out.descuento = {...out.descuento, contado:true}; }
   if (D.km && D.vehiculoId && docs[D.vehiculoId]) await Store.put(D.vehiculoId, {...docs[D.vehiculoId], km:D.km});
   await Store.put(id, out);
   if (D.citaId && docs[D.citaId]) await Store.put(D.citaId, {...docs[D.citaId], trabajoId:id, estado:'llego'});
@@ -218,8 +222,9 @@ function openJob(id) {
         </div>
         ${acts}
         <div class="list">${j.lineas.map(l => `<div class="item static"><div class="grow"><div class="t" style="white-space:normal">${esc(l.desc || TIPOS[l.tipo])}</div><div class="s">${TIPOS[l.tipo]} · ${String(l.cant).replace('.', ',')} ${l.tipo === 'mo' ? 'h' : 'ud'} × ${eur(l.precio)}</div></div><div class="amt num" style="font-size:18px">${eur(l.cant * l.precio)}</div></div>`).join('')}</div>
-        <div class="card"><div class="totals"><span class="muted">Base</span><span>${eur(t.base)}</span><span class="muted">IVA ${t.iva} %</span><span>${eur(t.cuota)}</span><b style="align-self:end">Total</b><span class="big">${eur(t.total)}</span>${pagado(j) ? `<span class="muted">Pagado</span><span class="pos">${eur(pagado(j))}</span><b>Pendiente</b><b>${eur(pendiente(j))}</b>` : ''}</div></div>
+        <div class="card"><div class="totals">${t.dto ? `<span class="muted">Importe</span><span>${eur(t.bruto)}</span><span class="muted">Descuento ${esc(j.descuento.codigo)}</span><span class="pos">− ${eur(t.dto)}</span>` : ''}<span class="muted">Base</span><span>${eur(t.base)}</span><span class="muted">IVA ${t.iva} %</span><span>${eur(t.cuota)}</span><b style="align-self:end">Total</b><span class="big">${eur(t.total)}</span>${pagado(j) ? `<span class="muted">Pagado</span><span class="pos">${eur(pagado(j))}</span><b>Pendiente</b><b>${eur(pendiente(j))}</b>` : ''}</div></div>
         ${(j.pagos || []).length ? `<div class="card">${j.pagos.map(p => `<div class="kv"><span>${fdate(p.fecha)} · ${esc(METODOS[p.metodo] || p.metodo)}</span><span class="v pos">${eur(p.importe)}</span></div>`).join('')}</div>` : ''}
+        ${jobExtras(j)}
         ${j.firma ? `<div class="card stack" style="gap:6px"><div class="eyebrow">Firma de aceptación</div><img src="${j.firma}" alt="Firma del cliente" style="background:#fff;border-radius:8px;max-height:120px;object-fit:contain"><div class="muted small">${esc(j.aceptadoNombre || c.nombre)} · ${fdate(j.aceptadoFecha)}</div></div>` : j.aceptadoFecha ? `<div class="muted small">Aceptado por WhatsApp o teléfono el ${fdate(j.aceptadoFecha)}.</div>` : ''}
         <div class="grid2 keep"><button class="btn" data-a="doc" data-id="${id}:P">Ver presupuesto</button>${j.numFactura ? `<button class="btn" data-a="doc" data-id="${id}:F">Ver factura</button>` : `<button class="btn" data-a="newcitajob" data-id="${id}">${ICON.cal}Dar cita</button>`}</div>
         ${!j.numFactura ? `<button class="btn danger block" data-a="deljob" data-id="${id}">Borrar presupuesto</button>` : `<div class="muted tiny">Una factura emitida no se borra. Si hay un error, tu gestor hace una factura rectificativa.</div>`}`
@@ -280,8 +285,10 @@ function docHTML(j, kind) {
     <div style="text-align:right"><div class="dt">${title}</div><div>Nº <b>${esc(isF ? j.numFactura : j.numPresupuesto)}</b></div><div>Fecha: ${fdate(isF ? j.fechaFactura : j.fecha)}</div></div></div>
     ${j.simplificada ? '' : `<div class="boxes"><div class="box"><div class="lbl">Cliente</div><b>${esc(fc.nombre)}</b>${fc.nif ? '<br>NIF ' + esc(fc.nif) : ''}${fc.direccion ? '<br>' + esc(fc.direccion) : ''}</div><div class="box"><div class="lbl">Vehículo</div><b>${esc(showPlate(v.matricula || j.matricula))}</b><br>${esc(carName(v))}${v.bastidor ? '<br>Bastidor ' + esc(v.bastidor) : ''}${j.km ? '<br>' + Number(j.km).toLocaleString('es-ES') + ' km' : ''}</div></div>`}
     <table><thead><tr><th>Concepto</th><th class="r">Cant.</th><th class="r">Precio</th><th class="r">Importe</th></tr></thead><tbody>${j.lineas.map(l => `<tr><td>${esc(l.desc || TIPOS[l.tipo])}</td><td class="r">${String(l.cant).replace('.', ',')}${l.tipo === 'mo' ? ' h' : ''}</td><td class="r">${eur(j.totalFijo ? t.base : l.precio)}</td><td class="r">${eur(j.totalFijo ? t.base : l.cant * l.precio)}</td></tr>`).join('')}</tbody></table>
-    <div class="tt"><div><span>Base imponible</span><span>${eur(t.base)}</span></div><div><span>IVA ${t.iva} %</span><span>${eur(t.cuota)}</span></div><div class="g"><span>Total</span><span>${eur(t.total)}</span></div></div>
+    <div class="tt">${t.dto ? `<div><span>Importe</span><span>${eur(t.bruto)}</span></div><div><span>Descuento ${esc(j.descuento.codigo)}</span><span>− ${eur(t.dto)}</span></div>` : ''}<div><span>Base imponible</span><span>${eur(t.base)}</span></div><div><span>IVA ${t.iva} %</span><span>${eur(t.cuota)}</span></div><div class="g"><span>Total</span><span>${eur(t.total)}</span></div></div>
     <div style="margin-top:14px;font-size:11.5px;color:#444">${isF ? ((j.pagos || []).length ? 'Pagado: ' + j.pagos.map(p => fdate(p.fecha) + ' ' + (METODOS[p.metodo] || '') + ' ' + eur(p.importe)).join(' · ') : (cf.iban ? 'Forma de pago: transferencia a ' + esc(cf.iban) + ' o tarjeta.' : '')) : 'Presupuesto válido ' + esc(cf.validez) + ' días.'}</div>
+    ${j.mostrarGesto && gesto(j) ? `<div style="margin-top:10px;padding:8px 10px;border:1px dashed #0B3B8F;border-radius:6px;font-size:12px">Horas reales dedicadas: ${String(horasReales(j)).replace('.', ',')} h. Le cobramos ${String(horasCobradas(j)).replace('.', ',')} h: ${eur(gesto(j).valor)} de trabajo sin coste para usted.</div>` : ''}
+    ${(j.fotos || []).length ? `<div class="lbl" style="margin-top:12px">Fotos del trabajo</div><div class="pgrid" style="margin-top:6px">${j.fotos.map(f => `<img class="pthumb" data-file="${f}" alt="Foto">`).join('')}</div>` : ''}
     ${!isF && j.firma ? `<div style="margin-top:10px"><div class="lbl">Aceptado por ${esc(j.aceptadoNombre || '')} · ${fdate(j.aceptadoFecha)}</div><img src="${j.firma}" alt="Firma" style="max-height:80px"></div>` : ''}
   </div>`;
 }
@@ -340,6 +347,7 @@ async function makePDF(id, kind) {
   });
   if (y > 240) { doc.addPage(); y = 20; }
   y += 4; doc.setFontSize(10);
+  if (t.dto) { doc.text('Importe', 140, y); doc.text(E(t.bruto), 195, y, {align:'right'}); y += 5.5; doc.text('Descuento ' + j.descuento.codigo, 140, y); doc.text('- ' + E(t.dto), 195, y, {align:'right'}); y += 5.5; }
   doc.text('Base imponible', 140, y); doc.text(E(t.base), 195, y, {align:'right'}); y += 5.5;
   doc.text('IVA ' + t.iva + ' %', 140, y); doc.text(E(t.cuota), 195, y, {align:'right'}); y += 3;
   doc.setLineWidth(0.7); doc.setDrawColor(...BLUE); doc.line(140, y, 195, y); y += 6;
@@ -347,7 +355,19 @@ async function makePDF(id, kind) {
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(70);
   const foot = isF ? ((j.pagos || []).length ? 'Pagado: ' + j.pagos.map(p => fdate(p.fecha) + ' ' + (METODOS[p.metodo] || '') + ' ' + E(p.importe)).join(' · ') : (cf.iban ? 'Forma de pago: transferencia a ' + cf.iban + ' o tarjeta.' : '')) : 'Presupuesto válido ' + cf.validez + ' días.';
   doc.text(doc.splitTextToSize(foot, 180), 15, y + 12);
+  if (j.mostrarGesto && gesto(j)) { y += 6; doc.setTextColor(11, 59, 143); doc.text('Horas reales dedicadas: ' + String(horasReales(j)).replace('.', ',') + ' h. Le cobramos ' + String(horasCobradas(j)).replace('.', ',') + ' h: ' + E(gesto(j).valor) + ' de trabajo sin coste para usted.', 15, y + 12); doc.setTextColor(70); }
   if (!isF && j.firma) { doc.text('Aceptado por ' + (j.aceptadoNombre || '') + ' el ' + fdate(j.aceptadoFecha), 15, y + 20); try { doc.addImage(j.firma, 'JPEG', 15, y + 22, 50, 18); } catch (e) {} }
   const name = (j.simplificada ? 'Ticket_' + j.numFactura : isF ? 'Factura_' + j.numFactura : 'Presupuesto_' + j.numPresupuesto) + (j.matricula ? '_' + normPlate(j.matricula) : '') + '.pdf';
+  if ((j.fotos || []).length) {
+    doc.addPage(); doc.setTextColor(0); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text('Fotos del trabajo · ' + (isF ? j.numFactura : j.numPresupuesto), 15, 20);
+    let px = 15, py = 28;
+    for (const f of j.fotos.slice(0, 6)) {
+      const b = await Store.getFile(f); if (!b) continue;
+      const url = await blobToData(b); const im = new Image(); im.src = url; await new Promise(r => { im.onload = r; im.onerror = r; });
+      const w = 88, h = Math.min(75, w * (im.height || 3) / (im.width || 4));
+      try { doc.addImage(url, 'JPEG', px, py, w, h); } catch (e) {}
+      if (px === 15) px = 107; else { px = 15; py += 80; }
+    }
+  }
   saveBlob(doc.output('blob'), name);
 }

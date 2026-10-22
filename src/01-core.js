@@ -30,15 +30,15 @@ const fold = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ
 const hm = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 const toMin = s => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
 
-const CATS = ['Recambios','Aceites y líquidos','Herramientas','Alquiler del local','Luz, agua, teléfono','Seguros','Gestoría','Cuota autónomos','Combustible','Publicidad','Otros'];
+const CATS = ['Recambios','Aceites y líquidos','Herramientas','Alquiler del local','Suministros (luz, agua, teléfono)','Seguros','Gestoría','Cuota autónomos','Combustible','Publicidad','Mantenimiento del local','Otros'];
 const ESTADOS = {borrador:'Presupuesto', enviado:'Esperando respuesta', aceptado:'En el taller', facturado:'Por cobrar', cobrado:'Cobrado', rechazado:'Rechazado'};
 const CITA_EST = {pendiente:'Sin confirmar', confirmada:'Confirmada', llego:'Ha llegado', novino:'No vino'};
 const TIPOS = {mo:'Mano de obra', pieza:'Pieza', otro:'Otro'};
-const METODOS = {tarjeta:'Tarjeta (enlace)', datafono:'Datáfono', efectivo:'Efectivo', bizum:'Bizum', transferencia:'Transferencia'};
+const METODOS = {tarjeta:'Tarjeta (enlace)', datafono:'Datáfono o tarjeta', efectivo:'Efectivo', bizum:'Bizum', transferencia:'Transferencia'};
 const COMB = ['', 'Gasolina', 'Diésel', 'Híbrido', 'Híbrido enchufable', 'Eléctrico', 'GLP', 'GNC'];
 
 const DEFAULT_CFG = {
-  t:'cfg', taller:'Taller Les Borges del Camp', propietario:'Mohamed', nif:'', direccion:'',
+  t:'cfg', taller:'Taller Les Borges del Camp', propietario:'', apellidos:'', registrado:false, nif:'', direccion:'',
   poblacion:'Les Borges del Camp (Tarragona)', telefono:'', email:'', iban:'',
   tarifa:45, iva:21, irpf:20, linkPago:'', bizum:'', validez:15, serieF:'F', serieP:'P', serieT:'T',
   dias:[1,2,3,4,5], m1:'08:30', m2:'13:30', t1:'15:30', t2:'19:00', sab:false, sab1:'09:00', sab2:'13:00', hueco:60,
@@ -134,9 +134,10 @@ const carName = v => [v.marca, v.modelo, v.version].filter(Boolean).join(' ');
 function totals(j) {
   const iva = j.iva ?? S.cfg.iva;
   if (j.totalFijo) { const total = r2(j.totalFijo); const base = r2(total / (1 + iva / 100)); return {base, iva, cuota:r2(total - base), total}; }
-  const base = r2((j.lineas || []).reduce((s, l) => s + r2((+l.cant || 0) * (+l.precio || 0)), 0));
-  const cuota = r2(base * iva / 100);
-  return {base, iva, cuota, total:r2(base + cuota)};
+  const bruto = r2((j.lineas || []).reduce((s, l) => s + r2((+l.cant || 0) * (+l.precio || 0)), 0));
+  const d = j.descuento; const dto = d ? r2(Math.min(bruto, d.tipo === 'pct' ? bruto * (+d.valor || 0) / 100 : +d.valor || 0)) : 0;
+  const base = r2(bruto - dto); const cuota = r2(base * iva / 100);
+  return {bruto, dto, base, iva, cuota, total:r2(base + cuota)};
 }
 const pagado = j => r2((j.pagos || []).reduce((s, p) => s + (+p.importe || 0), 0));
 const pendiente = j => r2(Math.max(0, totals(j).total - pagado(j)));
