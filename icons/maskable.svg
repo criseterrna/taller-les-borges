@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#0B3B8F"/><g transform="translate(18 18) scale(0.7)">
+  <circle cx="60" cy="60" r="58" fill="#0B3B8F"/>
+  <circle cx="60" cy="60" r="53" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
+  <clipPath id="c"><circle cx="60" cy="60" r="51"/></clipPath>
+  <g clip-path="url(#c)" fill="#FFFFFF">
+    <!-- cabeza -->
+    <circle cx="60" cy="38" r="12.5"/>
+    <!-- gorra: copa + visera -->
+    <path d="M46.5,36 C46.5,22 54,19.5 60,19.5 C67,19.5 73.5,23 73.5,35 L73.5,36.5 Z"/>
+    <path d="M70,33.5 L86,35.5 C87.5,35.8 87.5,38.4 86,38.6 L70,38.6 Z"/>
+    <rect x="46" y="34.6" width="28" height="1.8" fill="#0B3B8F"/>
+    <!-- cuello y torso (mono) -->
+    <rect x="54.5" y="48" width="11" height="8"/>
+    <path d="M28,124 L30,72 C30.5,62 37,56 48,54.5 L60,60 L72,54.5 C83,56 89.5,62 90,72 L92,124 Z"/>
+    <!-- cuello del mono -->
+    <path d="M48,54.5 L60,63 L72,54.5" fill="none" stroke="#0B3B8F" stroke-width="2"/>
+  </g>
+  <g clip-path="url(#c)">
+    <!-- antebrazo en diagonal: codo junto a la cadera, mano a la altura del corazón -->
+    <line x1="33" y1="101" x2="67" y2="75" stroke="#0B3B8F" stroke-width="17" stroke-linecap="round"/>
+    <line x1="33" y1="101" x2="67" y2="75" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"/>
+    <!-- puño de la manga -->
+    <line x1="56.6" y1="75.6" x2="63.4" y2="84.4" stroke="#0B3B8F" stroke-width="1.8"/>
+    <!-- llave pegada al cuerpo: del puño hacia el hombro -->
+    <g transform="rotate(-58 70 72)">
+      <rect x="60" y="68.6" width="36" height="6.8" rx="3.4" fill="#0B3B8F"/>
+      <rect x="61" y="69.6" width="34" height="4.8" rx="2.4" fill="#FFFFFF"/>
+      <circle cx="98" cy="72" r="8.2" fill="#0B3B8F"/>
+      <circle cx="98" cy="72" r="6.2" fill="#FFFFFF"/>
+      <rect x="99" y="69" width="9" height="6" fill="#0B3B8F"/>
+      <circle cx="60" cy="72" r="3.4" fill="#0B3B8F"/>
+    </g>
+    <!-- puño -->
+    <rect x="62" y="68" width="14" height="11" rx="4.5" fill="#0B3B8F"/>
+    <rect x="63.6" y="69.6" width="10.8" height="7.8" rx="3.4" fill="#FFFFFF"/>
+    <path d="M64,73.5 H74" stroke="#0B3B8F" stroke-width="1.2"/>
+  </g>
+</g></svg>
